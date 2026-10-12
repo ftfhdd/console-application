@@ -39,7 +39,7 @@ jobs:
       with:
         name: MyConsoleApp-Executable  # The download name you will see in GitHub
         path: |
-          **/bin/Release/net8.0/
-          !**/bin/Release/net8.0/**/*.pdb
+          bin/Release/
+          !bin/Release/**/*.pdb
         # Note: If using .NET 9, change 'net8.0' to 'net9.0' above. 
         # The '!' line excludes heavy debugging (.pdb) files to save space.
