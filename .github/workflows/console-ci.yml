@@ -1,4 +1,4 @@
-name: .NET Framework Build and Artifact Publish
+name: .NET Core Build, Test, and Artifact Publish
 
 on:
   push:
@@ -7,23 +7,39 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-publish:
+  build-and-test:
     runs-on: windows-latest
 
     steps:
+    # 1. Checkout your repository code onto the runner
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
+    # 2. Setup the .NET SDK
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x' # Adjust to your exact target version (e.g., 9.0.x)
 
+    # 3. Restore dependencies
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # 4. Build the project in Release mode
     - name: Build Application
-      run: msbuild ConsoleApp1.csproj /p:Configuration=Release
+      run: dotnet build --configuration Release --no-restore
 
+    # 5. Run tests
+    - name: Run Tests
+      run: dotnet test --configuration Release --no-build --verbosity normal
+
+    # 6. Publish and Upload the Executable Output (NEW STEP)
     - name: Publish and Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ConsoleApp1-Executable
+        name: MyConsoleApp-Executable  # The download name you will see in GitHub
         path: |
-          bin/Release/
-          !bin/Release/**/*.pdb
+          **/bin/Release/net8.0/
+          !**/bin/Release/net8.0/**/*.pdb
+        # Note: If using .NET 9, change 'net8.0' to 'net9.0' above. 
+        # The '!' line excludes heavy debugging (.pdb) files to save space.
