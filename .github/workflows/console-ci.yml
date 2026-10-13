@@ -6,40 +6,82 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build-and-test:
     runs-on: windows-latest
 
     steps:
-    # 1. Checkout your repository code onto the runner
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 2. Setup the .NET SDK
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x' # Adjust to your exact target version (e.g., 9.0.x)
+        dotnet-version: '8.0.x' 
 
-    # 3. Restore dependencies
     - name: Restore dependencies
       run: dotnet restore
 
-    # 4. Build the project in Release mode
     - name: Build Application
       run: dotnet build --configuration Release --no-restore
 
-    # 5. Run tests
     - name: Run Tests
       run: dotnet test --configuration Release --no-build --verbosity normal
 
-    # 6. Publish and Upload the Executable Output (NEW STEP)
+    # We update the path slightly to capture the core binaries cleanly
     - name: Publish and Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MyConsoleApp-Executable  # The download name you will see in GitHub
+        name: MyConsole-artifact  
         path: |
           bin/Release/
           !bin/Release/**/*.pdb
-        # Note: If using .NET 9, change 'net8.0' to 'net9.0' above. 
-        # The '!' line excludes heavy debugging (.pdb) files to save space.
+
+  # NEW JOB: Packages the previously built artifacts into Docker on a Linux runner
+  package-docker:
+    runs-on: ubuntu-latest
+    needs: build-and-test  # Ensures this only runs if your tests pass!
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    # 1. Download the artifact produced by the Windows job into a dedicated directory
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: MyConsole-artifact
+        path: ./MyConsoleApp-Executable
+
+    # 2. Log into the GitHub Container Registry
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # 3. Extract metadata tags
+    - name: Extract Docker metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: type=sha,format=short
+
+    # 4. Build and push the Docker image 
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
