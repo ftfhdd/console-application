@@ -58,7 +58,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: MyConsole-artifact
-        path: ./MyConsoleApp-Executable
+        path: ./MyConsoleApp-artifact
 
     # 2. Log into the GitHub Container Registry
     - name: Log in to the Container registry
@@ -81,7 +81,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: .
-        file: ./Dockerfile
+        file: ./Properties/Dockerfile
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
