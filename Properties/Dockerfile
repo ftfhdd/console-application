@@ -4,4 +4,4 @@ WORKDIR /app
 
 COPY ./publish/ .
 
-ENTRYPOINT ["dotnet", "MyConsole-artifact.exe"]
+ENTRYPOINT ["dotnet", "MyConsole-artifact.dll"]
